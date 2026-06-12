@@ -1,201 +1,95 @@
-# FIFA 2026 Outcome Prediction Using Poisson Regression and Monte Carlo Simulation
+# ⚽ FIFA World Cup 2026 — Outcome Prediction
 
-## Overview
+> Poisson regression + Monte Carlo simulation to forecast every stage of the FIFA World Cup 2026 across 1,000 simulated tournaments.
 
-This project aims to predict the outcomes of the FIFA World Cup 2026 using a data-driven football analytics pipeline. Instead of relying on subjective rankings or expert opinions, the project combines historical international match data, Elo ratings, Poisson regression, and Monte Carlo simulation to estimate each team's probability of progressing through every stage of the tournament.
-
-The overall workflow follows a structured approach:
-
-1. Collect and clean historical international football match data.
-2. Construct team strength ratings using Elo methodology.
-3. Engineer match-level features that capture team quality and contextual factors.
-4. Train statistical models to estimate expected goals for each team.
-5. Convert expected goals into match outcome probabilities.
-6. Simulate the entire World Cup thousands of times using Monte Carlo methods.
-7. Aggregate simulation results to estimate the probability of reaching each tournament stage.
-
-The result is a fully reproducible tournament forecasting system capable of estimating each nation's likelihood of reaching the Round of 32, Round of 16, Quarter-finals, Semi-finals, Final, and ultimately winning the FIFA World Cup 2026.
+**🔴 Live app → [montecarlos-fifa.streamlit.app](https://montecarlos-fifa.streamlit.app/)**
 
 ---
 
-## Project Goal
+## What this does
 
-The primary objective of this project is to estimate the probability of each qualified team reaching different stages of the FIFA World Cup 2026.
+Instead of gut feelings or pundit opinions, this project builds a data-driven forecasting pipeline that estimates each team's probability of reaching every stage of the 2026 tournament — from the Round of 32 all the way to lifting the trophy.
 
-In addition to the prediction engine, an interactive Streamlit application was developed to:
+The short version: historical match data trains two Poisson regression models (one for home goals, one for away goals), those models power a match simulator, and that simulator runs the entire 48-team World Cup 1,000 times to produce stage-by-stage probabilities for every qualified nation.
 
-* Explore tournament probabilities.
-* Simulate an individual World Cup run in real time.
-* Compare match-up probabilities between any two teams.
-* Visualize tournament outcomes and progression paths.
+---
+
+## Result
+
+| # | Team | Win probability |
+|---|------|----------------|
+| 🥇 | 🇪🇸 Spain | 26.9% |
+| 🥈 | 🇦🇷 Argentina | 18.2% |
+| 🥉 | 🇫🇷 France | 11.6% |
+| 4 | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 England | 6.9% |
+| 5 | 🇧🇷 Brazil | 4.9% |
+| 6 | 🇨🇴 Colombia | 4.1% |
+
+Spain leads with the highest Elo rating in the dataset (2229) — the model consistently rewards historical dominance and recent form.
+
+Full probability table across all 48 teams and all 6 stages is in `data/processed/wc2026_tournament_probabilities.csv`.
 
 ---
 
 ## Methodology
 
-### 1. Data Collection and Preparation
+**1. Data collection & cleaning**
+Historical international match results collected and cleaned — team name normalization, neutral venue handling, filtering low-signal friendlies.
 
-Historical international football match data was collected and cleaned to create a consistent dataset suitable for modeling.
+**2. Elo ratings**
+Custom Elo pipeline computes a dynamic strength score for every team before each match, updated after every result with recency and tournament-type weighting.
 
-Additional reference datasets were prepared, including:
+**3. Feature engineering**
+Per-match features built from the Elo pipeline: home/away Elo, Elo delta, neutral venue flag, tournament importance weight, confederation encoding.
 
-* FIFA World Cup 2026 tournament structure.
-* Group-stage fixtures.
-* Knockout-stage bracket mappings.
-* FIFA rankings.
-* Confederation information.
+**4. Poisson regression (xG models)**
+Two separate Poisson regression models trained — one predicting home goals, one predicting away goals. Poisson is the right distribution here: goals are count events with low expected values per 90 minutes.
 
-### 2. Team Strength Estimation (Elo Ratings)
+**5. Match outcome probabilities**
+Both models' expected goals are convolved across the Poisson distribution to get win, draw, and loss probabilities for any matchup.
 
-A custom Elo rating pipeline was built to estimate team strength before each match.
+**6. Tournament simulation**
+Full 2026 bracket simulated: 12 groups, group standings, best third-place qualification, then knockout rounds (R32 → R16 → QF → SF → Final).
 
-These ratings provide a dynamic measure of team quality based on historical performance and form.
-
-### 3. Feature Engineering
-
-Several match-level features were generated, including:
-
-* Home team Elo rating
-* Away team Elo rating
-* Elo rating difference
-* Neutral venue indicator
-* Tournament importance weight
-* Home confederation
-* Away confederation
-
-These features serve as inputs to the goal prediction models.
-
-### 4. Goal Prediction Modeling
-
-Two separate Poisson regression models were trained:
-
-* Home-team goals model
-* Away-team goals model
-
-Poisson regression is widely used in football analytics because goals are count-based events and generally follow Poisson-like distributions.
-
-The models estimate expected goals for both teams in a match.
-
-### 5. Match Outcome Probabilities
-
-Expected goals from the Poisson models are converted into probabilities for:
-
-* Home win
-* Draw
-* Away win
-
-These probabilities become the foundation for tournament simulation.
-
-### 6. Tournament Simulation
-
-The entire FIFA World Cup tournament structure was simulated, including:
-
-* Group-stage matches
-* Group standings
-* Best third-placed qualification rules
-* Round of 32
-* Round of 16
-* Quarter-finals
-* Semi-finals
-* Final
-
-### 7. Monte Carlo Simulation
-
-To estimate long-run tournament probabilities, the complete World Cup was simulated 1,000 times.
-
-By repeating the tournament many times, the project estimates how frequently each team reaches each stage, providing a probabilistic forecast rather than a single deterministic prediction.
+**7. Monte Carlo ×1,000**
+The entire tournament is run 1,000 times. Each team's win probability = how often they won across all runs.
 
 ---
 
-## Project Structure
+## Notebooks
 
-```text
-football_wc2026/
-│
-├── data/
-│   ├── interim/
-│   ├── processed/
-│   ├── raw/
-│   └── reference/
-│
-├── models/
-│   ├── poisson_home.pkl
-│   ├── poisson_away.pkl
-│   └── feature_columns.pkl
-│
-├── notebooks/
-│   ├── 0-data_fetch.ipynb
-│   ├── 1-data_cleaning.ipynb
-│   ├── 2-feature_engineering_ELO.ipynb
-│   ├── 3-feature_engineering_match_metadata.ipynb
-│   ├── 4-model_training.ipynb
-│   └── 5-tournament_simulation.ipynb
-│
-├── src/
-│   ├── data_loader.py
-│   ├── prediction.py
-│   ├── group_stage.py
-│   ├── qualification.py
-│   ├── bracket.py
-│   ├── knockout.py
-│   ├── tournament.py
-│   └── styling.py
-│
-├── simulation_app.py
-├── pyproject.toml
-├── uv.lock
-└── README.md
+| Notebook | What it does |
+|----------|-------------|
+| `0-data_fetch.ipynb` | Pulls raw match data |
+| `1-data_cleaning.ipynb` | Cleans and normalizes |
+| `2-feature_engineering_ELO.ipynb` | Builds Elo ratings |
+| `3-feature_engineering_match_metadata.ipynb` | Engineers match features |
+| `4-model_training.ipynb` | Trains Poisson models |
+| `5-tournament_simulation.ipynb` | Runs Monte Carlo simulation |
+
+---
+
+## Streamlit app
+
+Three views:
+
+- **Probability explorer** — full 48-team ranking with win, final, SF, QF, R16, R32 probabilities
+- **Live simulation** — simulate a full World Cup in real time with score-by-score reveals
+- **Match explorer** — pick any two teams, get win/draw/loss odds, xG, Elo, form, H2H, and top scoreline probabilities
+
+Run locally:
+```bash
+streamlit run simulation_app.py
 ```
 
 ---
 
-## Technologies Used
+## Stack
 
-* Python
-* Pandas
-* NumPy
-* SciPy
-* Statsmodels
-* Streamlit
-* Jupyter Notebooks
-* Matplotlib
-* UV Package Manager
-
----
-
-## Results
-
-The final output is a probability table containing each team's likelihood of reaching:
-
-* Round of 32
-* Round of 16
-* Quarter-finals
-* Semi-finals
-* Final
-* Tournament Winner
-
-Results are stored in:
-
-```text
-data/processed/wc2026_tournament_probabilities.csv
-```
-
-The Monte Carlo simulations indicated that teams with the strongest Elo ratings consistently achieved the highest tournament-winning probabilities.
-
----
-
-## Streamlit Application
-
-The interactive dashboard includes:
-
-* Tournament probability explorer
-* Single-run World Cup simulator
-* Team-vs-team match probability explorer
-* Tournament progression visualization
+Python · Pandas · NumPy · SciPy · Statsmodels · Plotly · Streamlit · Jupyter · UV
 
 ---
 
 ## Acknowledgements
 
-This project was inspired by and built upon ideas from the work of **Anas Riad**. Portions of the project structure and methodology were adapted from his World Cup prediction project.
-
+Inspired by and built upon the work of **Anas Riad**. Portions of the project structure and methodology were adapted from his World Cup prediction project.
